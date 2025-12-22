@@ -9,9 +9,13 @@ pipeline {
         stage('Installation') {
             steps {
                 echo '📦 Installation des dépendances...'
-                // La librairie libatomic est maintenant installée dans le système !
-                // npm devrait fonctionner directement.
                 sh 'npm install'
+                
+                // --- NOUVELLE ÉTAPE ---
+                echo '🌍 Téléchargement des navigateurs...'
+                // Cette commande télécharge Chrome, Firefox et Webkit
+                // pour que Playwright puisse les utiliser.
+                sh 'npx playwright install'
             }
         }
         
