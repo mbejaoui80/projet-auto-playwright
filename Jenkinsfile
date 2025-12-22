@@ -2,7 +2,6 @@ pipeline {
     agent any
     
     tools {
-        // On utilise l'outil Node qu'on a configuré
         nodejs 'NodeJS-Auto'
     }
     
@@ -11,12 +10,11 @@ pipeline {
             steps {
                 echo '📦 Installation des dépendances...'
                 
-                // --- CORRECTIF ---
-                // Installation de la librairie système manquante pour Alpine Linux
-                // Cela permet à npm de fonctionner correctement
-                sh 'apk add --no-cache libatomic'
+                // --- CORRECTIF V2 ---
+                // "apk" n'existe pas, on tente "apt-get" (pour Debian/Ubuntu)
+                // On met à jour la liste (update) et on installe libatomic1
+                sh 'apt-get update && apt-get install -y libatomic1'
                 
-                // Installe les librairies du projet
                 sh 'npm install'
             }
         }
@@ -24,7 +22,6 @@ pipeline {
         stage('Test') {
             steps {
                 echo '🚀 Lancement du Robot Playwright...'
-                // Lance les tests
                 sh 'npx playwright test'
             }
         }
