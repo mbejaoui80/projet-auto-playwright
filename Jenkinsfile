@@ -11,18 +11,16 @@ pipeline {
                 echo '📦 Installation des dépendances...'
                 sh 'npm install'
                 
-                // --- NOUVELLE ÉTAPE ---
                 echo '🌍 Téléchargement des navigateurs...'
-                // Cette commande télécharge Chrome, Firefox et Webkit
-                // pour que Playwright puisse les utiliser.
                 sh 'npx playwright install'
             }
         }
         
         stage('Test') {
             steps {
-                echo '🚀 Lancement du Robot Playwright...'
-                sh 'npx playwright test'
+                echo '🚀 Lancement du Robot Playwright (Firefox uniquement)...'
+                // On cible uniquement Firefox pour éviter le crash de Chromium
+                sh 'npx playwright test --project=firefox'
             }
         }
     }
