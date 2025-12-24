@@ -1,28 +1,29 @@
 pipeline {
-    agent any
-    
-    tools {
-        nodejs 'NodeJS-Auto'
+    agent {
+        dockerfile {
+            filename 'Dockerfile'
+            // On connecte le socket Docker pour que ça marche
+            args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
+        }
     }
     
+    // SUPPRESSION DE LA SECTION 'tools' : Node est déjà dans l'image !
+    
     stages {
-        stage('Installation') {
+        stage('Installation & Test') {
             steps {
+                echo '🚀 Démarrage dans le conteneur personnalisé...'
+                
+                // Vérification de la version (pour être sûr)
+                sh 'node -v'
+                
                 echo '📦 Installation des dépendances...'
                 sh 'npm install'
                 
-                echo '🌍 Téléchargement des navigateurs...'
-                sh 'npx playwright install'
-            }
-        }
-        
-        stage('Test') {
-            steps {
-                echo '🚀 Lancement du Robot Playwright (Firefox uniquement)...'
-                // On cible uniquement Firefox pour éviter le crash de Chromium
-                sh 'npx playwright test --project=firefox'
+                echo '🧪 Lancement des tests E2E sur SwagLabs...'
+                // Le test complet !
+                sh 'npx playwright test'
             }
         }
     }
-    
 }
