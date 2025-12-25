@@ -1,48 +1,54 @@
 pipeline {
-    agent {
-        docker {
-            image 'mcr.microsoft.com/playwright:v1.57.0-jammy'
-            reuseNode true 
-        }
-    }
+    // 1. On utilise l'agent "any" par défaut (le Jenkins principal, qui a Java)
+    agent any 
     
     stages {
         stage('Checkout') {
             steps {
+                // Le code est téléchargé sur l'hôte Jenkins
                 git branch: 'main', url: 'https://github.com/mbejaoui80/projet-auto-playwright.git'
             }
         }
 
-        stage('Installation des dépendances') {
+        stage('Diagnostic Fichiers') {
             steps {
-                echo "📦 Installation des paquets..."
-                // Ton correctif qui fonctionne bien :
-                sh 'npm ci && npm install allure-playwright'
+                // On liste les fichiers pour vérifier si c'est .ts ou .js
+                sh 'ls -la'
             }
         }
 
-        stage('Exécution des Tests') {
+        stage('Tests dans Docker') {
+            // 2. SEULEMENT cette étape s'exécute dans le conteneur Playwright
+            agent {
+                docker {
+                    image 'mcr.microsoft.com/playwright:v1.57.0-jammy'
+                    // Important : permet de réutiliser le dossier où on a fait le checkout
+                    reuseNode true 
+                }
+            }
             steps {
-                echo "🚀 Lancement des tests avec reporter Allure..."
-                // On génère les résultats bruts dans le dossier 'allure-results'
+                echo "📦 Installation et Test dans le conteneur..."
+                // On installe et on lance.
+                // J'ai mis 'npm install' tout court pour être sûr qu'il prenne tout
+                sh 'npm install && npm install allure-playwright'
+                
+                // On lance les tests et on génère les résultats
                 sh 'npx playwright test --reporter=line,allure-playwright'
             }
         }
     }
 
-    // C'EST ICI QUE CA CHANGEAIT :
+    // 3. Le "post" revient sur l'agent principal (qui a Java) pour générer le rapport
     post {
         always {
-            echo "📊 Génération du rapport Allure..."
+            echo "📊 Génération du rapport Allure (depuis l'hôte Jenkins)..."
             script {
-                // Cette étape transforme les résultats bruts en un beau site web
                 allure([
                     includeProperties: false,
                     jdk: '',
                     properties: [],
                     reportBuildPolicy: 'ALWAYS',
-                    // On pointe vers le dossier créé par Playwright
-                    results: [[path: 'allure-results']] 
+                    results: [[path: 'allure-results']]
                 ])
             }
         }
