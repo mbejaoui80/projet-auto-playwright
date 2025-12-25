@@ -1,6 +1,5 @@
 pipeline {
-    // 1. D'ABORD : On utilise l'agent principal (le serveur Jenkins lui-même)
-    // C'est lui qui a Java, Git et qui sait gérer les fichiers.
+    // 1. IMPORTANT : On commence sur la machine Jenkins (Hôte) qui possède Java
     agent any 
     
     stages {
@@ -12,36 +11,31 @@ pipeline {
         }
 
         stage('Tests dans Docker') {
-            // 2. ENSUITE : On active le conteneur JUSTE pour cette étape
+            // 2. SEULEMENT cette étape s'exécute dans le conteneur Playwright
             agent {
                 docker {
                     image 'mcr.microsoft.com/playwright:v1.57.0-jammy'
-                    // reuseNode true est OBLIGATOIRE :
-                    // Cela dit au conteneur : "Utilise le dossier où Jenkins a téléchargé le code"
+                    // CRUCIAL : "reuseNode true" permet de voir les fichiers téléchargés à l'étape d'avant
                     reuseNode true 
                 }
             }
             steps {
                 echo "🚀 Démarrage du conteneur Playwright..."
                 
-                // Petit check : cette fois le fichier sera bien visible
-                sh 'ls -la' 
+                // Petit check pour confirmer que le fichier est bien là
+                sh 'ls -la playwright.config.ts' 
                 
-                // Installation (dans le conteneur)
+                // Installation et Test (dans le conteneur)
                 sh 'npm ci && npm install allure-playwright'
-                
-                // Test (dans le conteneur)
-                // Le rapport sera écrit dans le dossier partagé "allure-results"
                 sh 'npx playwright test --reporter=line,allure-playwright'
             }
         }
     }
 
-    // 3. ENFIN : On est sorti du conteneur, on est revenu sur l'agent "any" (Jenkins)
-    // Jenkins a Java, donc il peut générer le rapport !
+    // 3. RETOUR sur la machine Jenkins (Hôte) pour générer le rapport avec Java
     post {
         always {
-            echo "📊 Génération du rapport Allure (depuis l'hôte Jenkins)..."
+            echo "📊 Génération du rapport Allure..."
             script {
                 allure([
                     includeProperties: false,
