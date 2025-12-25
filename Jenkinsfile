@@ -1,32 +1,31 @@
 pipeline {
     agent any
     
+    // On force le nettoyage des variables Docker qui pourraient venir des plugins
     environment {
-        // On force Docker à utiliser l'ancien constructeur (pour éviter l'erreur "exec format error")
-        DOCKER_BUILDKIT = '0'
+        DOCKER_TLS_VERIFY = ''
+        DOCKER_HOST = ''
     }
 
     stages {
-        stage('Vérification') {
+        stage('Enquête Technique') {
             steps {
-                echo '🔍 Vérification de la connexion Docker...'
-                // On teste si Jenkins arrive enfin à voir Docker depuis le script
-                sh 'docker ps'
-                sh 'docker version'
-            }
-        }
+                echo '🕵️‍♂️ [1] QUI SUIS-JE ?'
+                // On vérifie si Jenkins tourne vraiment en Root ou s'il est repassé en utilisateur standard
+                sh 'whoami'
+                sh 'id'
 
-        stage('Construction & Test') {
-            steps {
-                echo '🔨 Construction de l\'image...'
-                // Astuce PRO : On utilise "tar" pour envoyer les fichiers au moteur Docker
-                // Cela contourne le problème de chemins entre Windows et Linux
-                sh 'tar -czh . | docker build -t mon-image-playwright -'
-                
-                echo '🚀 Lancement des Tests...'
-                // On lance le conteneur qu'on vient de créer pour jouer les tests
-                // --ipc=host est nécessaire pour que Chrome ne crash pas
-                sh 'docker run --rm --ipc=host mon-image-playwright npx playwright test'
+                echo '🕵️‍♂️ [2] INSPECTION DU SOCKET'
+                // On regarde si le fichier existe et quels sont ses droits (rwx)
+                sh 'ls -lh /var/run/docker.sock'
+
+                echo '🕵️‍♂️ [3] VARIABLES D\'ENVIRONNEMENT'
+                // On regarde si une config cachée essaie de forcer une autre adresse
+                sh 'env | grep DOCKER || true'
+
+                echo '🕵️‍♂️ [4] TEST FINAL'
+                // On tente la commande fatidique
+                sh 'docker ps'
             }
         }
     }
